@@ -99,21 +99,25 @@ jobs:
         wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/${{ env.CLANG_BRANCH }}/clang-${{ env.CLANG_VERSION }}.tar.gz
         tar -C clang-aosp/ -zxvf clang-${{ env.CLANG_VERSION }}.tar.gz
 
-    - name: Download Custom-Clang
-      if: env.USE_CUSTOM_CLANG == 'true'
-      run: |
+    -  name: Download Custom-Clang
+       if: env.USE_CUSTOM_CLANG == 'true'
+       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace
+        # 核心修复：无论哪种情况，先确保创建目标文件夹
+        mkdir -p clang-aosp 
+        
         if [[ ${{ env.CUSTOM_CLANG_SOURCE }} =~ git ]]; then
             if [[ ${{ env.CUSTOM_CLANG_SOURCE }} == *'.tar.gz' ]]; then
                 wget -O clang.tar.gz ${{ env.CUSTOM_CLANG_SOURCE }}
-                mkdir clang-aosp
-                tar -C clang-aosp/ -zxvf clang.tar.gz
+                tar -zxvf clang.tar.gz -C clang-aosp/ --strip-components=1
             else
-                git clone ${{ env.CUSTOM_CLANG_SOURCE }} -b ${{ env.CUSTOM_CLANG_BRANCH }} clang-aosp --depth=1
+                git clone ${{ env.CUSTOM_Clang_SOURCE }} -b ${{ env.CUSTOM_CLANG_BRANCH }} clang-aosp --depth=1
             fi
         else
-            wget -O clang.tar.gz ${{ env.CUSTOM_CLANG_SOURCE }}
-            tar -C clang-aosp/ -zxvf clang.tar.gz || unzip clang.tar.gz -d clang-aosp/
+            # 针对国内源的 tar.gz 格式进行健壮性处理
+            wget -O clang.archive ${{ env.CUSTOM_CLANG_SOURCE }}
+            # 尝试 tar 解压，如果失败则尝试 unzip，确保万无一失
+            tar -zxvf clang.archive -C clang-aosp/ --strip-components=1 || unzip clang.archive -d clang-aosp/
         fi
 
     - name: Download Gcc-aosp
